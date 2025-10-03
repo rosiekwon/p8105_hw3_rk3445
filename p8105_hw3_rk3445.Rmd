@@ -16,15 +16,25 @@ The `instacart` dataset provides item-level records of customer grocery orders f
 
 Each row represents a single product within an order, the data includes the name of the product (`product_name`), customer identifier (`user_id`), the hour of the day on which the order was placed (`order_hour_of_day`), aisle identifier (`aisle_id`), the recency of the previous order (`days_since_prior_order`), an indication whether an item is a `reordered` and etc.
 
+```{r}
+instacart = instacart |> 
+  janitor::clean_names() |> 
+  mutate(
+    order_dow_label = lubridate::wday(order_dow, label = TRUE, abbr = FALSE)
+  )
+```
+
 For example, in the first row of the dataset:
 
 * `user_id`: `r instacart$user_id[1]`  
 * `order_id`: `r instacart$order_id[1]`  
+* `order_dow_label` : `r instacart$order_dow_label[1]`
 * `order_hour_of_day`: `r instacart$order_hour_of_day[1]`  
 * `product_name`: `r instacart$product_name[1]`  
 * `aisle`: `r instacart$aisle[1]`
 
-This shows that customer `r instacart$user_id[1]` placed order `r instacart$order_id[1]` at `r instacart$order_hour_of_day[1]` o'clock and purchased `r instacart$product_name[1]` from the `r instacart$aisle[1]` aisle.
+
+This shows that customer with id `r instacart$user_id[1]` placed order `r instacart$order_id[1]` at `r instacart$order_hour_of_day[1]` o'clock on `r instacart$order_dow_label[1]` and purchased `r instacart$product_name[1]` from the `r instacart$aisle[1]` aisle.
 
 
 #### How many aisles are there, and which aisles are the most items ordered from?
@@ -65,10 +75,22 @@ instacart |>
     aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")
     ) |>
   group_by(aisle, product_name) |> 
-  summarize(n_items = n()) |> 
+  summarize(n_items = n(), .groups = "drop") |> 
   arrange(aisle, desc(n_items)) |> 
-  slice_max(n = 3, order_by = n_items) |> 
+  slice_max(n = 3, order_by = n_items, by = aisle) |>
   knitr::kable()
 ```
 
-Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+#### Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+```{r}
+mean_hour = 
+instacart |> 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |> 
+  group_by(product_name) |> 
+  summarize(
+    mean_hour = mean(order_hour_of_day, na.rm = TRUE)
+  )
+
+```
+
