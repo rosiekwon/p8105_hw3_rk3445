@@ -12,7 +12,19 @@ library(p8105.datasets)
 data("instacart")
 ```
 
-In the `instacart` dataset, it contains `r nrow(instacart)` orders with `r ncol(instacart)` description of each order including name of the product (`product_name`), customer identifier (`user_id`), the hour of the day on which the order was placed (`order_hour_of_day`), aisle identifier (`aisle_id`).
+The `instacart` dataset provides item-level records of customer grocery orders from the Instacart delivery service. This dataset contains `r nrow(instacart)` observations and `r ncol(instacart)` variables (columns). 
+
+Each row represents a single product within an order, the data includes the name of the product (`product_name`), customer identifier (`user_id`), the hour of the day on which the order was placed (`order_hour_of_day`), aisle identifier (`aisle_id`) and etc.
+
+```{r}
+example_obs = instacart |> 
+  janitor::clean_names() |> 
+  select(user_id, product_name, aisle, order_hour_of_day, order_id) |> 
+  slice(1)
+
+```
+
+By examining a single observation record, we can illustrate how the data is structured at the item level: Customer `user_id` `r example_obs$user_id` placed an order (`order_id` `r example_obs$order_id`) at `r example_obs$order_hour_of_day` o'clock (`order_hour_of_day` = `r example_obs$order_hour_of_day`) and included one instance of the product `r example_obs$product_name` from the `r example_obs$aisle` aisle.
 
 ### How many aisles are there, and which aisles are the most items ordered from?
 
@@ -23,7 +35,7 @@ instacart |>
   arrange(desc(count))
 ```
 
-There are `r length(unique(instacart$aisle_id))` aisles and the most items are ordered from fresh vegetables aisles. 
+The total number of unique aisles in the instacart dataset is `r length(unique(instacart$aisle_id))` and the most items are ordered from fresh vegetables aisles. 
 
 Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
