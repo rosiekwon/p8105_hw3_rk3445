@@ -14,19 +14,20 @@ data("instacart")
 
 The `instacart` dataset provides item-level records of customer grocery orders from the Instacart delivery service. This dataset contains `r nrow(instacart)` observations and `r ncol(instacart)` variables (columns). 
 
-Each row represents a single product within an order, the data includes the name of the product (`product_name`), customer identifier (`user_id`), the hour of the day on which the order was placed (`order_hour_of_day`), aisle identifier (`aisle_id`) and etc.
+Each row represents a single product within an order, the data includes the name of the product (`product_name`), customer identifier (`user_id`), the hour of the day on which the order was placed (`order_hour_of_day`), aisle identifier (`aisle_id`), the recency of the previous order (`days_since_prior_order`), an indication whether an item is a `reordered` and etc.
 
-```{r}
-example_obs = instacart |> 
-  janitor::clean_names() |> 
-  select(user_id, product_name, aisle, order_hour_of_day, order_id) |> 
-  slice(1)
+For example, in the first row of the dataset:
 
-```
+* `user_id`: `r instacart$user_id[1]`  
+* `order_id`: `r instacart$order_id[1]`  
+* `order_hour_of_day`: `r instacart$order_hour_of_day[1]`  
+* `product_name`: `r instacart$product_name[1]`  
+* `aisle`: `r instacart$aisle[1]`
 
-By examining a single observation record, we can illustrate how the data is structured at the item level: Customer `user_id` `r example_obs$user_id` placed an order (`order_id` `r example_obs$order_id`) at `r example_obs$order_hour_of_day` o'clock (`order_hour_of_day` = `r example_obs$order_hour_of_day`) and included one instance of the product `r example_obs$product_name` from the `r example_obs$aisle` aisle.
+This shows that customer `r instacart$user_id[1]` placed order `r instacart$order_id[1]` at `r instacart$order_hour_of_day[1]` o'clock and purchased `r instacart$product_name[1]` from the `r instacart$aisle[1]` aisle.
 
-### How many aisles are there, and which aisles are the most items ordered from?
+
+#### How many aisles are there, and which aisles are the most items ordered from?
 
 ```{r}
 instacart |> 
@@ -37,6 +38,37 @@ instacart |>
 
 The total number of unique aisles in the instacart dataset is `r length(unique(instacart$aisle_id))` and the most items are ordered from fresh vegetables aisles. 
 
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
-Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+#### Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+
+```{r}
+instacart |> 
+  group_by(aisle) |> 
+  summarise(count = n()) |> 
+  filter(count > 10000) |> 
+  ggplot(aes(x = reorder(aisle, count), y = count)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Number of Items Ordered by Aisle (>10,000 orders)",
+    x = "Aisle",
+    y = "Number of Items Ordered"
+  ) +
+  theme_minimal()
+
+```
+
+#### Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+```{r}
+instacart |> 
+  filter(
+    aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")
+    ) |>
+  group_by(aisle, product_name) |> 
+  summarize(n_items = n()) |> 
+  arrange(aisle, desc(n_items)) |> 
+  slice_max(n = 3, order_by = n_items) |> 
+  knitr::kable()
+```
+
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
