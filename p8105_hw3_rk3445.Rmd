@@ -20,7 +20,7 @@ Each row represents a single product within an order, the data includes the name
 instacart = instacart |> 
   janitor::clean_names() |> 
   mutate(
-    order_dow_label = lubridate::wday(order_dow, label = TRUE, abbr = FALSE)
+    order_dow_label = lubridate::wday(order_dow + 1, label = TRUE, abbr = FALSE)
   )
 ```
 
@@ -47,6 +47,8 @@ instacart |>
 ```
 
 The total number of unique aisles in the instacart dataset is `r length(unique(instacart$aisle_id))` and the most items are ordered from fresh vegetables aisles. 
+
+
 
 #### Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 
@@ -84,13 +86,17 @@ instacart |>
 #### Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
 
 ```{r}
-mean_hour = 
 instacart |> 
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |> 
-  group_by(product_name) |> 
+  group_by(product_name, order_dow_label) |> 
   summarize(
-    mean_hour = mean(order_hour_of_day, na.rm = TRUE)
-  )
-
+    mean_hour = mean(order_hour_of_day, na.rm = TRUE), .groups = "drop"
+  ) |> 
+  pivot_wider(
+    names_from = order_dow_label,
+    values_from = mean_hour
+  ) |> 
+  knitr::kable()
 ```
+
 
