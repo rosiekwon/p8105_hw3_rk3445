@@ -12,29 +12,58 @@ library(p8105.datasets)
 data("instacart")
 ```
 
-The `instacart` dataset provides item-level records of customer grocery orders from the Instacart delivery service. This dataset contains `r nrow(instacart)` observations and `r ncol(instacart)` variables (columns). 
+The `instacart` dataset provides item-level records of customer grocery orders from the Instacart delivery service. This dataset contains `r nrow(instacart)` observations and `r ncol(instacart)` variables (columns), where each row represents a single product within an order.
 
-Each row represents a single product within an order, the data includes the name of the product (`product_name`), customer identifier (`user_id`), the hour of the day on which the order was placed (`order_hour_of_day`), aisle identifier (`aisle_id`), the recency of the previous order (`days_since_prior_order`), an indication whether an item is a `reordered` and etc.
+Key variables in the dataset are following:
 
 ```{r}
-instacart = instacart |> 
+user = instacart |> 
   janitor::clean_names() |> 
-  mutate(
-    order_dow_label = lubridate::wday(order_dow + 1, label = TRUE, abbr = FALSE)
-  )
+  group_by(user_id) |> 
+  summarize(n_order = n()) |> 
+  arrange(desc(n_order)) 
 ```
+
+* `user_id` is used for identifying each customers in the dataset, there are `r length(unique(instacart$user_id))` distinct customers in the instacart, which enables to analyze behavior at the customer level. Both `r user$user_id[1]` and `r user$user_id[2]` ordered the most, with `r user$n_order[1]` orders each.
+
+
+```{r}
+pop_product = instacart |> 
+  janitor::clean_names() |> 
+  group_by(product_name) |> 
+  summarize(n_product = n()) |> 
+  arrange(desc(n_product)) 
+```
+
+* `product_name` and `product_id` are for identifying the specific product purchased, having `r length(unique(instacart$product_id))` unique products in the dataset. The most popular product are `r pop_product$product_name[1]` with `r pop_product$n_product[1]` orders , followed by `r pop_product$product_name[2]` with `r pop_product$n_product[2]` orders.
+
+
+* `aisle_id`, `aisle`, `department_id` and `department` are variables for identifying the location of products and enabling grouping products. The products are organized into `r length(unique(instacart$aisle))` aisles and `r length(unique(instacart$department))` departments.
+
+
+```{r}
+day_order = instacart |> 
+  janitor::clean_names() |>
+  mutate(
+    order_dow_label = wday(order_dow + 1, label = TRUE, abbr = FALSE)
+  ) |> 
+  group_by(order_dow_label) |> 
+  summarize(n_order = n())
+```
+
+* `order_dow`, `order_hour_of_day` indicate the time of orders from users. `days_since_prior_order` shows the how many days passed between orders with an average of `r round(mean(instacart$days_since_prior_order, na.rm = TRUE), 1)` days. Those variables are used to see shopping habits of customers over time.  `order_dow` is formatted in number so I created `order_dow_label` variable to easily notice the day of week. People usually buy their groceries on `r day_order$order_dow_label[1]` the most.
+
 
 For example, in the first row of the dataset:
 
 * `user_id`: `r instacart$user_id[1]`  
 * `order_id`: `r instacart$order_id[1]`  
-* `order_dow_label` : `r instacart$order_dow_label[1]`
-* `order_hour_of_day`: `r instacart$order_hour_of_day[1]`  
+* `order_hour_of_day` : `r instacart$order_hour_of_day[1]`
 * `product_name`: `r instacart$product_name[1]`  
 * `aisle`: `r instacart$aisle[1]`
 
 
-This shows that customer with id `r instacart$user_id[1]` placed order `r instacart$order_id[1]` at `r instacart$order_hour_of_day[1]` o'clock on `r instacart$order_dow_label[1]` and purchased `r instacart$product_name[1]` from the `r instacart$aisle[1]` aisle.
+This shows that customer with id `r instacart$user_id[1]` placed  `r instacart$order_id[1]` order at `r instacart$order_hour_of_day[1]` o'clock and purchased `r instacart$product_name[1]` from the `r instacart$aisle[1]` aisle.
 
 
 **How many aisles are there, and which aisles are the most items ordered from?**
@@ -46,13 +75,13 @@ instacart |>
   arrange(desc(count))
 ```
 
-The total number of unique aisles in the instacart dataset is `r length(unique(instacart$aisle_id))` and the most items are ordered from fresh vegetables aisles. 
+The total number of unique aisles in the instacart dataset is `r length(unique(instacart$aisle_id))` and the most items are ordered from fresh vegetables aisle. 
 
 
 
 **Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.**
 
-```{r}
+```{r fig.height=8}
 instacart |> 
   group_by(aisle) |> 
   summarise(count = n()) |> 
@@ -61,13 +90,14 @@ instacart |>
   geom_col() +
   coord_flip() +
   labs(
-    title = "Number of Items Ordered by Aisle (>10,000 orders)",
+    title = "Number of Items Ordered by Aisle (>10,000)",
     x = "Aisle",
     y = "Number of Items Ordered"
   ) +
-  theme_minimal()
-
+  theme_minimal(base_size = 13)
 ```
+
+
 
 **Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.**
 
@@ -83,14 +113,22 @@ instacart |>
   knitr::kable()
 ```
 
+
+
 **Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).**
+
+As `order_dow` variable has values from 0 to 6, I converted these numbers into human-readable weekday names in variable `order_dow_label.`
 
 ```{r}
 instacart |> 
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |> 
+  mutate(
+    order_dow_label = wday(order_dow + 1, label = TRUE, abbr = FALSE)
+  ) |> 
   group_by(product_name, order_dow_label) |> 
   summarize(
-    mean_hour = mean(order_hour_of_day, na.rm = TRUE), .groups = "drop"
+    mean_hour = round(mean(order_hour_of_day, na.rm = TRUE), digit = 2), 
+    .groups = "drop"
   ) |> 
   pivot_wider(
     names_from = order_dow_label,
@@ -98,6 +136,8 @@ instacart |>
   ) |> 
   knitr::kable()
 ```
+
+
 
 # Problem 2
 
@@ -148,22 +188,119 @@ zip_counts = zillow_nyc |>
 `r nrow(zip_counts)` zipcodes are observed fewer than 10 times from January 2015 to August 2024. These zipcodes are rarely observed likely due to limited data or missing/incomplete data. For example, some ZIP codes have more housing units tracked by Zillow, others fewer. ZIP codes with very few units or newly created ZIP codes may appear only rarely. Additionally, reporting gaps can cause a month of data for certain ZIP codes to be missing.
 
 
+
 **Create a table showing the average rental price in each borough and year (not month). Comment on trends in this table.**
 
 ```{r}
 zillow_nyc |> 
-  mutate(
-    year = str_sub(date, 1, 4) 
-  ) |> 
+  mutate(year = str_sub(date, 1, 4)) |> 
   group_by(county_name, year) |> 
   summarize(
     avg_rental_price = mean(zori, na.rm = TRUE)
   ) |> 
-  knitr::kable()
+  knitr::kable(
+    digits = 0,
+    caption = "Average Rental Price (ZORI) by NYC counties and Year",
+    col.names = c("Borough (County)", "Year", "Average ZORI")
+  )
+```
+
+From the table, we can see the upward trend in rental prices over time for all boroughs in New York City. However, in 2021, both Kings and Queens has dropped compared to year of 2020. This was mainly due to the COVID-19 pandemic. By 2022 and 2023, prices in all boroughs, including Kings and Queens, rebounded sharply, surpassing pre-pandemic price. 
+
+
+
+**Make a plot showing NYC Rental Prices within ZIP codes for all available years. Your plot should facilitate comparisons across boroughs. Comment on any significant elements of this plot.**
+
+```{r}
+zillow_nyc |> 
+  mutate(year = str_sub(date, 1, 4)) |>  
+  ggplot(aes(x = year, y = zori, color = county_name)) +
+  geom_point(alpha = .3) +
+  geom_smooth() +
+  labs(
+    title = "NYC Rental Prices (ZORI) Across ZIP Codes Over Time",
+    x = "Year",
+    y = "ZORI (Rental Price Index)",
+    color = "County"
+  ) 
+
+```
+
+```{r}
+zillow_nyc %>% 
+  mutate(year = str_sub(date, 1, 4)) %>%
+  group_by(county_name, year) %>%
+  summarize(avg_zori = mean(zori, na.rm = TRUE)) %>%
+  ggplot(aes(x = year, y = avg_zori, color = county_name)) +
+  geom_line(size = 1) +
+  geom_point() +
+  labs(
+    title = "Average Rental Price Trends Across NYC Boroughs",
+    x = "Year",
+    y = "Average ZORI",
+    color = "Borough"
+  ) +
+  theme_minimal()
+
 ```
 
 
-Make a plot showing NYC Rental Prices within ZIP codes for all available years. Your plot should facilitate comparisons across boroughs. Comment on any significant elements of this plot.
+```{r}
+zillow_nyc |> 
+  mutate(year = str_sub(date, 1, 4)) |> 
+  ggplot(aes(x = year, y = zori, color = county_name)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(se = FALSE) + 
+  facet_grid(. ~ county_name) +
+  labs(
+    title = "Distribution of Rental Prices by Borough and Year",
+    x = "Year",
+    y = "ZORI (Rental Price Index)",
+    fill = "County"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+zillow_nyc %>% 
+  mutate(year = as.numeric(str_sub(date, 1, 4))) %>%  
+  ggplot(aes(x = year, y = zori, color = county_name)) +
+  geom_point(alpha = 0.2, size = 0.7) +   # ZIP-level points
+  geom_smooth(se = FALSE, size = 1.2) +  # Borough trend highlight
+  labs(
+    title = "NYC Rental Prices Within ZIP Codes Over Time",
+    subtitle = "ZIP-level data with borough-level trend lines",
+    x = "Year",
+    y = "ZORI (Rental Price Index)",
+    color = "Borough"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+zillow_nyc |> 
+  mutate(year = as.integer(str_sub(date, 1, 4)))  |> 
+  group_by(zip_code, county_name, year) |> 
+  summarize(avg_zori = mean(zori, na.rm = TRUE), .groups = "drop") |> 
+  ggplot(aes(x = year, y = avg_zori, group = zip_code, color = county_name)) +
+  geom_line(alpha = 0.15) +
+  stat_summary(
+    aes(group = county_name), fun = mean, geom = "line", size = 1.5, alpha = 0.9
+  ) +
+  labs(
+    title = "ZIP-Level Rental Price Trends with Borough Averages",
+    subtitle = "Thin lines = individual ZIP codes, Thick lines = county-wide trend",
+    x = "Year",
+    y = "ZORI (Rental Price Index)",
+    color = "County"
+  ) + 
+  scale_x_continuous(
+    breaks = c(2015, 2017, 2019, 2021, 2023),
+    labels = c("2015", "2017", "2019", "2021", "2023")
+  ) +
+  theme_minimal()
+
+```
 
 Compute the average rental price within each ZIP code over each month in 2023. Make a reader-friendly plot showing the distribution of ZIP-code-level rental prices across boroughs; put differently, your plot should facilitate the comparison of the distribution of average rental prices across boroughs. Comment on this plot.
 
