@@ -4,10 +4,14 @@ author: "Rosie Kwon"
 output: github_document
 ---
 
+```{r}
+library(tidyverse)
+library(patchwork)
+```
+
 # Problem 1 
 
 ```{r}
-library(tidyverse)
 library(p8105.datasets)
 data("instacart")
 ```
@@ -17,7 +21,8 @@ The `instacart` dataset provides item-level records of customer grocery orders f
 Key variables in the dataset are following:
 
 ```{r}
-user = instacart |> 
+user = 
+  instacart |> 
   janitor::clean_names() |> 
   group_by(user_id) |> 
   summarize(n_order = n()) |> 
@@ -28,7 +33,8 @@ user = instacart |>
 
 
 ```{r}
-pop_product = instacart |> 
+pop_product = 
+  instacart |> 
   janitor::clean_names() |> 
   group_by(product_name) |> 
   summarize(n_product = n()) |> 
@@ -42,7 +48,8 @@ pop_product = instacart |>
 
 
 ```{r}
-day_order = instacart |> 
+day_order = 
+  instacart |> 
   janitor::clean_names() |>
   mutate(
     order_dow_label = wday(order_dow + 1, label = TRUE, abbr = FALSE)
@@ -171,12 +178,14 @@ zillow_nyc =
 ```
 
 
+
 **There are 116 months between January 2015 and August 2024. How many ZIP codes are observed 116 times? How many are observed fewer than 10 times? Why are some ZIP codes are observed rarely and others observed in each month?**
 
 (Question! Should I use the merged data of zipcode and zillow_nyc to consider the all the zipcodes instead of using only zillow dataset?)...!
 
 ```{r}
-zip_counts = zillow_nyc |> 
+zip_counts = 
+  zillow_nyc |> 
   drop_na(zori) |> 
   group_by(zip_code) |> 
   summarize(
@@ -213,7 +222,8 @@ From the table, we can see the upward trend in rental prices over time for all b
 
 
 ```{r}
-zillow_nyc |> 
+rental_allyear = 
+  zillow_nyc |> 
   mutate(year = as.integer(str_sub(date, 1, 4)))  |> 
   group_by(zip_code, county_name, year) |> 
   summarize(avg_zori = mean(zori, na.rm = TRUE), .groups = "drop") |> 
@@ -223,7 +233,7 @@ zillow_nyc |>
     aes(group = county_name), fun = mean, geom = "line", size = 1.5, alpha = 0.9
   ) +
   labs(
-    title = "ZIP-Level Rental Price Trends with Borough Averages",
+    title = "Rental Price Trends Across Boroughs from 2015 to 2024",
     subtitle = "Thin lines = individual ZIP codes, Thick lines = county-wide trend",
     x = "Year",
     y = "ZORI (Rental Price Index)",
@@ -233,11 +243,13 @@ zillow_nyc |>
     breaks = c(2015, 2017, 2019, 2021, 2023),
     labels = c("2015", "2017", "2019", "2021", "2023")
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "bottom") 
 
 ```
 
 This plot shows rental price trends in New York City across ZIP codes and counties from 2015 to 2024. Only Richmond county has a record from 2020 to 2024. The Zillow Observed Rent Index (ZORI) has a steady upward trend, with a noticeable acceleration after 2021. The thin lines indicate individual ZIP codes, showing substantial within-county variation. New York county has the widest spread upuntil 8000 ZORI and it stands out with the highest rent levels among five counties and the steepest increase from 2021 to 2022. 
+
 
 
 **Compute the average rental price within each ZIP code over each month in 2023. Make a reader-friendly plot showing the distribution of ZIP-code-level rental prices across boroughs; put differently, your plot should facilitate the comparison of the distribution of average rental prices across boroughs. Comment on this plot.**
@@ -245,20 +257,89 @@ This plot shows rental price trends in New York City across ZIP codes and counti
 !! question!
 The question says over each month but the zillow data already provides the monthly based rental price for each zip code. Does it mean that we need to compute the average over 2023?
 ```{r}
-zillow_nyc |> 
+rental_2023 = 
+  zillow_nyc |> 
   separate(
     date, into = c("year", "month", "day")
   )  |> 
   filter(year == 2023) |> 
   group_by(zip_code, county_name) |> 
   summarize(avg_zori = mean(zori)) |> 
-  ggplot(aes(y = avg_zori, fill = county_name)) +
-  geom_point() +
-  theme_minimal() +
-  theme(legend.position = "bottom") 
+  ggplot(aes(x = county_name, y = avg_zori)) +
+  geom_boxplot() +
+  labs(
+    title = "Rental Prices Across Boroughs in 2023",    
+    x = "County",
+    y = "Average ZORI (Rental Price Index)"
+    
+  )
+  theme_minimal() 
+```
+
+The plot shows the rental prices across counties in 2023. There are differences in median rental prices and the speadness of prices among zipcodes within each county. New York has the highest median rent price and the greatest variability having two outliers. On the other hands, Rickmond has the least variability and the lowest median rental prices. 
+
+**Combine the two previous plots into a single graphic, and export this to a results folder in your repository.**
+
+```{r}
+rental_allyear / rental_2023 
+
+rental_plot = rental_allyear + rental_2023 + plot_layout(ncol = 2)
+
+ggsave("results/rental_combined.png", rental_plot, width = 12, height = 5, dpi = 300)
+
 ```
 
 
-Combine the two previous plots into a single graphic, and export this to a results folder in your repository.
 
+# Problem 3
+
+**Load, tidy, merge, and organize the data sets.**
+- exclude participants less than 21 years of age, and those with missing demographic data
+- encode data with reasonable variable classes (i.e. not numeric, and using factors with the ordering of tables and plots in mind).
+
+```{r}
+#accelerometer data 
+accel = 
+  read_csv("data/nhanes_accel.csv") |> 
+  janitor::clean_names() 
+
+#demographic data
+covar = 
+  read_csv("data/nhanes_covar.csv", skip = 4) |> 
+  janitor::clean_names() |> 
+  filter(age >= 21) |> 
+  drop_na() |> 
+  mutate(
+    sex = case_match(
+      sex,
+      1 ~ "male",
+      2 ~ "female"
+    ),
+    education = case_match(
+      education,
+      1 ~ "Less than high school",
+      2 ~ "High school equivalent",
+      3 ~ "More than high school"
+    )
+  )
+```
+
+merged dataset ; 
+```{r}
+final_merged = 
+  left_join(covar, accel, by = "seqn") |> 
+  group_by(education, sex) |> 
+  summarize(
+    n_count = n(), 
+    .groups = "drop"
+  ) |> 
+  knitr::kable() 
+```
+
+
+Produce a reader-friendly table for the number of men and women in each education category, and create a visualization of the age distributions for men and women in each education category. Comment on these items.
+
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate across minutes to create a total activity variable for each participant. Plot these total activities (y-axis) against age (x-axis); your plot should compare men to women and have separate panels for each education level. Include a trend line or a smooth to illustrate differences. Comment on your plot.
+
+Accelerometer data allows the inspection activity over the course of the day. Make a three-panel plot that shows the 24-hour activity time courses for each education level and use color to indicate sex. Describe in words any patterns or conclusions you can make based on this graph; including smooth trends may help identify differences.
 
