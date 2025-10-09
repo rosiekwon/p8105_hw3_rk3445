@@ -184,7 +184,18 @@ zillow_nyc =
 (Question! Should I use the merged data of zipcode and zillow_nyc to consider the all the zipcodes instead of using only zillow dataset?)...!
 
 ```{r}
-zip_counts = 
+zipcode_all = 
+  zillow_nyc |> 
+  drop_na(zori) |> 
+  group_by(zip_code) |> 
+  summarize(
+    n_month = n()
+  ) |> 
+  filter(n_month == 116)
+```
+
+```{r}
+zipcode_10counts = 
   zillow_nyc |> 
   drop_na(zori) |> 
   group_by(zip_code) |> 
@@ -194,7 +205,7 @@ zip_counts =
   filter(n_month < 10)
 ```
 
-`r nrow(zip_counts)` zipcodes are observed fewer than 10 times from January 2015 to August 2024. These zipcodes are rarely observed likely due to limited data or missing/incomplete data. For example, some ZIP codes have more housing units tracked by Zillow, others fewer. ZIP codes with very few units or newly created ZIP codes may appear only rarely. Additionally, reporting gaps can cause a month of data for certain ZIP codes to be missing.
+`r nrow(zipcode_all)` zipcodes are observed 116 times and `r nrow(zipcode_10_counts)` zipcodes are observed fewer than 10 times from January 2015 to August 2024. These zipcodes are rarely observed likely due to limited data or missing/incomplete data. For example, some ZIP codes have more housing units tracked by Zillow, others fewer. ZIP codes with very few units or newly created ZIP codes may appear only rarely. Additionally, reporting gaps can cause a month of data for certain ZIP codes to be missing.
 
 
 
@@ -390,8 +401,21 @@ total |>
 The plot illustrates the relationship between total activity and age, separated by sex and education level. There is a declining trend in total activity with increasing age, showing that older people tend to be less total activity than younger ones. The trend lines show peaks in activity during ages 30-40, followed by a steady decline afterward. Especially, participants with less than high school education level exhibit the steepest decline showing the largest difference between age groups. Women tend to have higher activity levels than man in the younger to middle-aged groups. Only in less than high school group, men surpass women in activity level after their 40s. Overall, both age and education level are important factors influencing activity levels. 
 
 
+
 **Accelerometer data allows the inspection activity over the course of the day. Make a three-panel plot that shows the 24-hour activity time courses for each education level and use color to indicate sex. Describe in words any patterns or conclusions you can make based on this graph; including smooth trends may help identify differences.**
 
 
+```{r}
+merged = 
+final_merged |> 
+  pivot_longer(
+    cols = min1:min1440,
+    names_to = "time",
+    values_to = "activity"
+  ) |> 
+  ggplot(aes(x = time, y = activity, color = sex)) +
+  geom_smooth(method = 'loess', se = FALSE) +
+  facet_grid(. ~ education) 
+```
 
 
