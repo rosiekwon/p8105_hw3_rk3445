@@ -144,6 +144,7 @@ instacart |>
   knitr::kable()
 ```
 
+From the table, Coffee Ice Cream is ordered the latest on Tuesday, with an average order time of 15.38 hours. Pink Lady Apples are ordered the latest on Wednesday, with an average order time of 14.25 hours, and the earliest on Monday.
 
 
 # Problem 2
@@ -181,7 +182,6 @@ zillow_nyc =
 
 **There are 116 months between January 2015 and August 2024. How many ZIP codes are observed 116 times? How many are observed fewer than 10 times? Why are some ZIP codes are observed rarely and others observed in each month?**
 
-(Question! Should I use the merged data of zipcode and zillow_nyc to consider the all the zipcodes instead of using only zillow dataset?)...!
 
 ```{r}
 zipcode_all = 
@@ -266,8 +266,6 @@ This plot shows rental price trends in New York City across ZIP codes and counti
 
 **Compute the average rental price within each ZIP code over each month in 2023. Make a reader-friendly plot showing the distribution of ZIP-code-level rental prices across boroughs; put differently, your plot should facilitate the comparison of the distribution of average rental prices across boroughs. Comment on this plot.**
 
-!! question!
-The question says over each month but the zillow data already provides the monthly based rental price for each zip code. Does it mean that we need to compute the average over 2023?
 ```{r}
 rental_2023 = 
   zillow_nyc |> 
@@ -276,21 +274,23 @@ rental_2023 =
   )  |> 
   filter(year == 2023) |> 
   group_by(zip_code, county_name) |> 
-  summarize(avg_zori = mean(zori)) |> 
-  ggplot(aes(x = county_name, y = avg_zori)) +
-  geom_boxplot() +
+  summarize(avg_zori = mean(zori), .groups = "drop") |> 
+  ggplot(aes(x = county_name, y = avg_zori, fill = county_name)) +
+  geom_boxplot(na.rm = TRUE) +
   labs(
     title = "Rental Prices Across Boroughs in 2023",    
     x = "County",
     y = "Average ZORI (Rental Price Index)"
-    
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "bottom") 
 
 rental_2023
 ```
 
 The plot shows the rental prices across counties in 2023. There are differences in median rental prices and the speadness of prices among zipcodes within each county. New York has the highest median rent price and the greatest variability having two outliers. On the other hands, Rickmond has the least variability and the lowest median rental prices. 
+
+
 
 **Combine the two previous plots into a single graphic, and export this to a results folder in your repository.**
 
@@ -338,6 +338,8 @@ covar =
   )
 ```
 
+
+
 **Produce a reader-friendly table for the number of men and women in each education category**
 
 ```{r}
@@ -350,8 +352,14 @@ final_merged |>
     n_count = n(), 
     .groups = "drop"
   ) |> 
+  pivot_wider(
+    names_from = sex,
+    values_from = n_count
+  ) |> 
   knitr::kable() 
 ```
+
+
 
 **create a visualization of the age distributions for men and women in each education category.**
 
