@@ -205,7 +205,7 @@ zipcode_10counts =
   filter(n_month < 10)
 ```
 
-`r nrow(zipcode_all)` zipcodes are observed 116 times and `r nrow(zipcode_10_counts)` zipcodes are observed fewer than 10 times from January 2015 to August 2024. These zipcodes are rarely observed likely due to limited data or missing/incomplete data. For example, some ZIP codes have more housing units tracked by Zillow, others fewer. ZIP codes with very few units or newly created ZIP codes may appear only rarely. Additionally, reporting gaps can cause a month of data for certain ZIP codes to be missing.
+`r nrow(zipcode_all)` zipcodes are observed 116 times and `r nrow(zipcode_10counts)` zipcodes are observed fewer than 10 times from January 2015 to August 2024. These zipcodes are rarely observed likely due to limited data or missing/incomplete data. For example, some ZIP codes have more housing units tracked by Zillow, others fewer. ZIP codes with very few units or newly created ZIP codes may appear only rarely. Additionally, reporting gaps can cause a month of data for certain ZIP codes to be missing.
 
 
 
@@ -236,30 +236,31 @@ From the table, we can see the upward trend in rental prices over time for all b
 rental_allyear = 
   zillow_nyc |> 
   mutate(year = as.integer(str_sub(date, 1, 4)))  |> 
+  filter(!is.na(zori)) |>  
   group_by(zip_code, county_name, year) |> 
   summarize(avg_zori = mean(zori, na.rm = TRUE), .groups = "drop") |> 
   ggplot(aes(x = year, y = avg_zori, group = zip_code, color = county_name)) +
-  geom_line(alpha = 0.15) +
-  stat_summary(
-    aes(group = county_name), fun = mean, geom = "line", size = 1.5, alpha = 0.9
-  ) +
+  geom_point() +
+  facet_grid(. ~ county_name) +
   labs(
     title = "Rental Price Trends Across Boroughs from 2015 to 2024",
-    subtitle = "Thin lines = individual ZIP codes, Thick lines = county-wide trend",
     x = "Year",
-    y = "ZORI (Rental Price Index)",
-    color = "County"
+    y = "ZORI (Rental Price Index)"
   ) + 
   scale_x_continuous(
     breaks = c(2015, 2017, 2019, 2021, 2023),
     labels = c("2015", "2017", "2019", "2021", "2023")
   ) +
   theme_minimal() +
-  theme(legend.position = "bottom") 
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    legend.position = "bottom"
+  ) 
 
+rental_allyear
 ```
 
-This plot shows rental price trends in New York City across ZIP codes and counties from 2015 to 2024. Only Richmond county has a record from 2020 to 2024. The Zillow Observed Rent Index (ZORI) has a steady upward trend, with a noticeable acceleration after 2021. The thin lines indicate individual ZIP codes, showing substantial within-county variation. New York county has the widest spread upuntil 8000 ZORI and it stands out with the highest rent levels among five counties and the steepest increase from 2021 to 2022. 
+This plot shows rental price trends in New York City across ZIP codes and counties from 2015 to 2024. Only Richmond county has a record from 2020 to 2024. The Zillow Observed Rent Index (ZORI) has a steady upward trend, with a noticeable acceleration after 2021. The thin lines indicate individual ZIP codes, showing substantial within-county variation. New York county has the widest spread up until 8000 ZORI and it stands out with the highest rent levels among five counties and the steepest increase from 2021 to 2022. 
 
 
 
@@ -283,8 +284,10 @@ rental_2023 =
     x = "County",
     y = "Average ZORI (Rental Price Index)"
     
-  )
-  theme_minimal() 
+  ) +
+  theme_minimal()
+
+rental_2023
 ```
 
 The plot shows the rental prices across counties in 2023. There are differences in median rental prices and the speadness of prices among zipcodes within each county. New York has the highest median rent price and the greatest variability having two outliers. On the other hands, Rickmond has the least variability and the lowest median rental prices. 
@@ -405,17 +408,27 @@ The plot illustrates the relationship between total activity and age, separated 
 **Accelerometer data allows the inspection activity over the course of the day. Make a three-panel plot that shows the 24-hour activity time courses for each education level and use color to indicate sex. Describe in words any patterns or conclusions you can make based on this graph; including smooth trends may help identify differences.**
 
 
-```{r}
-merged = 
-final_merged |> 
+```{r, message=FALSE}
+final_merged |>
   pivot_longer(
     cols = min1:min1440,
     names_to = "time",
     values_to = "activity"
-  ) |> 
+  ) |>
+  mutate(time = as.numeric(gsub("min", "", time))) |> 
   ggplot(aes(x = time, y = activity, color = sex)) +
-  geom_smooth(method = 'loess', se = FALSE) +
-  facet_grid(. ~ education) 
+  geom_smooth(se = FALSE, linewidth = 1) +
+  facet_wrap(education ~ .) +
+  labs(
+    title = "24-hour Activity Pattern by Education Level and Sex",
+    x = "time (minutes)",
+    y = "Activity Level",
+    color = "Sex"
+  ) +
+  theme_minimal() + 
+  theme(legend.position = "bottom")
 ```
 
+The plot displays the 24-hour activity level trends by education level and sex. Across all groups, activity levels are low during the early morning (around 0–300 minutes), rise sharply around mid-morning, and peak during daytime (approximately 600–1000 minutes), followed by a steady decline toward nighttime (after 1000 minutes).
 
+Individuals with less than high school education show a sharper rise and the highest daytime peaks, possibly reflecting irregular daily routines. Across all education levels, men and women show broadly similar temporal activity trends. However, women tend to have slightly higher daytime activity levels across the day.
