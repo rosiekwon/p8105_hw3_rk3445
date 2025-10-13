@@ -216,13 +216,14 @@ zillow_nyc |>
   mutate(year = str_sub(date, 1, 4)) |> 
   group_by(county_name, year) |> 
   summarize(
-    avg_rental_price = mean(zori, na.rm = TRUE)
+    avg_rental_price = mean(zori, na.rm = TRUE), 
+    .groups = "drop"
   ) |> 
-  knitr::kable(
-    digits = 0,
-    caption = "Average Rental Price (ZORI) by NYC counties and Year",
-    col.names = c("Borough (County)", "Year", "Average ZORI")
-  )
+  pivot_wider(
+    names_from = year, 
+    values_from = avg_rental_price
+  ) |> 
+  knitr::kable()
 ```
 
 From the table, we can see the upward trend in rental prices over time for all boroughs in New York City. However, in 2021, both Kings and Queens has dropped compared to year of 2020. This was mainly due to the COVID-19 pandemic. By 2022 and 2023, prices in all boroughs, including Kings and Queens, rebounded sharply, surpassing pre-pandemic price. 
@@ -398,7 +399,7 @@ total =
 total |> 
   ggplot(aes(x = age, y = total_activity, color = sex)) +
   geom_point(alpha = 0.5) +
-  geom_smooth(method = 'loess', se = FALSE) +
+  geom_smooth(method = 'loess', formula = y ~ x, se = FALSE) +
   facet_grid(. ~ education) +
   labs(
     title = "Total Activity vs. Age by Education and Sex",
